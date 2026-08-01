@@ -1,0 +1,6 @@
+{
+  "name": "@wealthpilot/config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared eslint, tsconfig, and tailwind config presets."
+}

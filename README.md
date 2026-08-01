@@ -72,3 +72,4 @@ Building phase-by-phase per [docs/architecture.md § 17](docs/architecture.md#17
 
 - **Phase 0 — repo scaffold**: complete.
 - **Phase 1 — auth, workspace, DB schema, protected shell, design tokens**: complete. Signup, login, logout, and workspace create/switch verified end-to-end against a live local Postgres.
+- **Phase 2 — statement upload, parsing, categorization, transactions table**: complete. CSV/XLSX parsing with bank-format auto-detection (day-first dates, debit/credit or signed-amount columns), a manual column-mapping fallback for unrecognized formats, rule-based categorization (built-in keyword rules + per-workspace learned rules from inline corrections), and a filterable/sortable/paginated transactions table — all verified against live Postgres with a real sample statement.

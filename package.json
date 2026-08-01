@@ -13,5 +13,8 @@
     "test": "npm run test -w apps/web",
     "format": "npm run format -w apps/web",
     "format:check": "npm run format:check -w apps/web"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   }
 }

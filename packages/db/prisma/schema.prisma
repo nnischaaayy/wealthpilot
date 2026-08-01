@@ -16,8 +16,12 @@ model Workspace {
   name      String
   createdAt DateTime @default(now())
 
-  members   WorkspaceMember[]
-  auditLogs AuditLog[]
+  members       WorkspaceMember[]
+  auditLogs     AuditLog[]
+  accounts      Account[]
+  transactions  Transaction[]
+  categoryRules CategoryRule[]
+  uploadJobs    UploadJob[]
 
   @@map("workspaces")
 }
@@ -67,4 +71,109 @@ model AuditLog {
 
   @@index([workspaceId, createdAt])
   @@map("audit_logs")
+}
+
+enum AccountType {
+  checking
+  savings
+  credit
+  brokerage
+}
+
+model Account {
+  id          String      @id @default(cuid())
+  workspaceId String
+  name        String
+  institution String?
+  type        AccountType
+  currency    String      @default("USD")
+  createdAt   DateTime    @default(now())
+
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  uploadJobs   UploadJob[]
+
+  @@index([workspaceId])
+  @@map("accounts")
+}
+
+enum TransactionSource {
+  upload
+  manual
+  adapter
+}
+
+model Transaction {
+  id                 String            @id @default(cuid())
+  workspaceId        String
+  accountId          String
+  postedAt           DateTime
+  amountMinor        Int // integer minor units (cents/paise); negative = spend, positive = income
+  currency           String
+  description        String
+  merchantRaw        String?
+  merchantNormalized String?
+  category           String            @default("uncategorized")
+  subcategory        String?
+  source             TransactionSource @default(upload)
+  redactedFieldsHash String? // populated by the AI redaction gateway (Phase 5+); unused until then
+  createdAt          DateTime          @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  account   Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, postedAt])
+  @@index([workspaceId, category])
+  @@map("transactions")
+}
+
+model CategoryRule {
+  id             String   @id @default(cuid())
+  workspaceId    String
+  matcherPattern String // case-insensitive substring matched against merchantNormalized/description
+  category       String
+  priority       Int      @default(0) // higher wins; user corrections are seeded above built-in defaults
+  createdAt      DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, matcherPattern])
+  @@index([workspaceId, priority])
+  @@map("category_rules")
+}
+
+enum UploadJobStatus {
+  pending
+  mapping_required
+  processing
+  done
+  error
+}
+
+model UploadJob {
+  id               String          @id @default(cuid())
+  workspaceId      String
+  accountId        String
+  status           UploadJobStatus @default(pending)
+  fileName         String
+  detectedFormat   String?
+  errorDetail      String?
+  // Parsed rows + headers held only while status = mapping_required; cleared
+  // once the import is confirmed so raw statement data isn't retained
+  // longer than necessary.
+  rawRowsJson      Json?
+  columnMapping    Json?
+  transactionCount Int?
+  // Client-generated per-attempt key so a retried upload request replays the
+  // existing job instead of double-importing (§9 idempotency convention).
+  idempotencyKey   String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  account   Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, createdAt])
+  @@map("upload_jobs")
 }

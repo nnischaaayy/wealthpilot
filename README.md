@@ -71,4 +71,4 @@ npm run studio           # optional — browse data at http://localhost:5555
 Building phase-by-phase per [docs/architecture.md § 17](docs/architecture.md#17-proposed-implementation-phasing-for-after-approval).
 
 - **Phase 0 — repo scaffold**: complete.
-- **Phase 1 — auth, workspace, DB schema, protected shell, design tokens**: code-complete; live signup/login and migrations are unverified pending a local Postgres instance (Docker Desktop install in progress).
+- **Phase 1 — auth, workspace, DB schema, protected shell, design tokens**: complete. Signup, login, logout, and workspace create/switch verified end-to-end against a live local Postgres.

@@ -2,5 +2,24 @@
   "name": "@wealthpilot/db",
   "version": "0.0.0",
   "private": true,
-  "description": "Prisma schema, migrations, and seed scripts. Populated in Phase 1."
+  "description": "Prisma schema, migrations, and seed scripts.",
+  "main": "src/client.ts",
+  "types": "src/client.ts",
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.3",
+    "dotenv": "^17.4.2",
+    "prisma": "^7.9.1",
+    "typescript": "^5"
+  }
 }

@@ -19,7 +19,7 @@ docs/              Architecture doc and ADRs
 ### Prerequisites
 - Node.js 22+
 - Python 3.11+
-- Docker Desktop (for local Postgres/Redis) — not required until Phase 1
+- Docker Desktop (for local Postgres/Redis)
 
 ### Web app
 
@@ -53,6 +53,22 @@ cp .env.example .env
 docker compose -f infra/docker-compose.yml up -d
 ```
 
+### Database (Prisma)
+
+Once Postgres is up, apply the schema in `packages/db/prisma/schema.prisma`:
+
+```bash
+cd packages/db
+cp .env.example .env   # only if it doesn't already point at your local Postgres
+npm run migrate:dev     # creates apps/web's tables + migration history
+npm run studio           # optional — browse data at http://localhost:5555
+```
+
+`apps/web` reads `DATABASE_URL` from its own `apps/web/.env.local` (gitignored — copy the value from `.env.example`). `AUTH_SECRET` is also required there; generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. Google OAuth (`AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET`) is optional — the credentials (email/password) provider works without it.
+
 ## Status
 
-Building phase-by-phase per [docs/architecture.md § 17](docs/architecture.md#17-proposed-implementation-phasing-for-after-approval). Currently: **Phase 0 — repo scaffold** complete.
+Building phase-by-phase per [docs/architecture.md § 17](docs/architecture.md#17-proposed-implementation-phasing-for-after-approval).
+
+- **Phase 0 — repo scaffold**: complete.
+- **Phase 1 — auth, workspace, DB schema, protected shell, design tokens**: code-complete; live signup/login and migrations are unverified pending a local Postgres instance (Docker Desktop install in progress).

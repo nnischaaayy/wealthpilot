@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum WorkspaceRole {
+  owner
+  member
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  members   WorkspaceMember[]
+  auditLogs AuditLog[]
+
+  @@map("workspaces")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String? // null for OAuth-only users (e.g. Google sign-in)
+  name         String?
+  createdAt    DateTime @default(now())
+
+  memberships     WorkspaceMember[]
+  auditLogActions AuditLog[]
+
+  @@map("users")
+}
+
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(owner)
+  createdAt   DateTime      @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@map("workspace_members")
+}
+
+// Security-relevant actions (login, holdings edits, data export/delete, category-rule
+// changes, ...) — append-only, never updated or deleted (§14).
+model AuditLog {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  actorUserId  String
+  action       String
+  entityType   String
+  entityId     String
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor     User      @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@map("audit_logs")
+}

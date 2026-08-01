@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -78,15 +79,18 @@ export function WorkspaceSwitcher({
           }
         />
         <DropdownMenuContent align="start" className="w-64">
-          <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
-          {workspaces.map((workspace) => (
-            <DropdownMenuItem key={workspace.id} onClick={() => handleSwitch(workspace.id)}>
-              <span className="flex-1 truncate">{workspace.name}</span>
-              {workspace.id === activeWorkspaceId && <Check className="size-4" />}
-            </DropdownMenuItem>
-          ))}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+            {workspaces.map((workspace) => (
+              <DropdownMenuItem key={workspace.id} onClick={() => handleSwitch(workspace.id)}>
+                <span className="flex-1 truncate">{workspace.name}</span>
+                {workspace.id === activeWorkspaceId && <Check className="size-4" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DialogTrigger
+            nativeButton={false}
             render={
               <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                 <Plus className="size-4" />

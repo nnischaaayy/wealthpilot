@@ -43,3 +43,7 @@ export function getCategoryLabel(id: string): string {
 export function isValidCategory(id: string): boolean {
   return CATEGORY_MAP.has(id);
 }
+
+export function getCategoryGroup(id: string): BudgetGroup {
+  return CATEGORY_MAP.get(id)?.group ?? "wants";
+}

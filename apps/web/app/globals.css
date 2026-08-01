@@ -18,6 +18,7 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  --color-chart-6: var(--chart-6);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -84,11 +85,15 @@
   --negative-foreground: oklch(0.99 0 0);
   --warning: oklch(0.62 0.15 65);
   --warning-foreground: oklch(0.145 0 0);
-  --chart-1: oklch(0.55 0.13 85);
-  --chart-2: oklch(0.5 0.15 150);
-  --chart-3: oklch(0.145 0 0);
-  --chart-4: oklch(0.55 0.2 25);
-  --chart-5: oklch(0.6 0 0);
+  /* Categorical chart palette — validated via dataviz skill's
+     validate_palette.js against this surface (#ffffff): all six checks
+     pass (light mode). Fixed order, never cycled or reassigned. */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --chart-6: #008300;
   --radius: 0.625rem;
   --sidebar: oklch(0.99 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -129,11 +134,14 @@
   --negative-foreground: oklch(0.11 0 0);
   --warning: oklch(0.79 0.14 65);
   --warning-foreground: oklch(0.11 0 0);
-  --chart-1: oklch(0.78 0.13 85);
-  --chart-2: oklch(0.72 0.17 150);
-  --chart-3: oklch(0.97 0 0);
-  --chart-4: oklch(0.7 0.19 25);
-  --chart-5: oklch(0.5 0 0);
+  /* Same categorical palette, dark-mode steps — validated against this
+     surface (#0b0b0b, our --card): all six checks pass. */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #008300;
   --sidebar: oklch(0.09 0 0);
   --sidebar-foreground: oklch(0.97 0 0);
   --sidebar-primary: oklch(0.78 0.13 85);

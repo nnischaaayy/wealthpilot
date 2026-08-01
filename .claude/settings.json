@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Browser__read_page",
+      "Bash(npm run typecheck *)",
+      "mcp__Claude_Browser__navigate",
+      "mcp__Claude_Browser__get_page_text",
+      "mcp__Claude_Browser__read_console_messages",
+      "Bash(npm run test *)",
+      "mcp__Claude_Browser__preview_logs",
+      "Bash(npm run lint *)",
+      "Bash(npm audit *)",
+      "Bash(npx prisma validate *)",
+      "Bash(npx tsc --noEmit *)"
+    ]
+  }
+}

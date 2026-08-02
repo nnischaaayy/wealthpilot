@@ -9,7 +9,7 @@ export default function AdvisorPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">AI Advisor</h1>
         <p className="text-sm text-muted-foreground">
-          Budget Coach — spending, budgeting, and savings questions, grounded in your own data.
+          Spending, portfolio, and month-in-review questions — grounded in your own data.
         </p>
       </div>
       <AdvisorChatPanel />

@@ -214,3 +214,21 @@ model Holding {
   @@index([workspaceId])
   @@map("holdings")
 }
+
+// Small, curated financial-education knowledge base for RAG (architecture.md
+// §13.3) — not per-workspace data, so no workspaceId. embedding is
+// Unsupported because pgvector isn't a Prisma-native type: the generated
+// client never touches this column, ai-service reads/writes it directly via
+// asyncpg (same read-only-relative-to-Prisma-schema pattern as
+// tools/transactions.py and tools/holdings.py, except this table is also
+// written to — by the offline seed script, not at request time).
+model KnowledgeArticle {
+  id        String                     @id @default(cuid())
+  slug      String                     @unique
+  title     String
+  content   String
+  embedding Unsupported("vector(512)")?
+  createdAt DateTime                   @default(now())
+
+  @@map("knowledge_articles")
+}

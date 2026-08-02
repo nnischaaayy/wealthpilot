@@ -29,7 +29,7 @@ def test_rejects_when_last_message_is_not_from_the_user() -> None:
     assert events[0]["type"] == "error"
 
 
-def test_portfolio_intent_returns_a_not_yet_available_message() -> None:
+def test_portfolio_intent_without_api_key_degrades_gracefully() -> None:
     response = client.post(
         "/advisor/chat",
         json={
@@ -39,11 +39,11 @@ def test_portfolio_intent_returns_a_not_yet_available_message() -> None:
     )
     events = _parse_sse(response.text)
     assert len(events) == 1
-    assert events[0]["type"] == "done"
-    assert "Portfolio" in events[0]["text"]
+    assert events[0]["type"] == "error"
+    assert "ANTHROPIC_API_KEY" in events[0]["text"]
 
 
-def test_report_intent_returns_a_not_yet_available_message() -> None:
+def test_report_intent_without_api_key_degrades_gracefully() -> None:
     response = client.post(
         "/advisor/chat",
         json={
@@ -53,8 +53,8 @@ def test_report_intent_returns_a_not_yet_available_message() -> None:
     )
     events = _parse_sse(response.text)
     assert len(events) == 1
-    assert events[0]["type"] == "done"
-    assert "Dashboard" in events[0]["text"]
+    assert events[0]["type"] == "error"
+    assert "ANTHROPIC_API_KEY" in events[0]["text"]
 
 
 def test_budget_intent_without_api_key_degrades_gracefully() -> None:

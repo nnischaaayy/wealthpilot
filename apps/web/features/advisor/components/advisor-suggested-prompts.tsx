@@ -1,7 +1,9 @@
 const PROMPTS = [
   "How much have I spent on dining this month?",
   "Am I on track with my 50/30/20 budget?",
-  "How big should my emergency fund be?",
+  "How concentrated is my portfolio?",
+  "Summarize my spending this month",
+  "What is diversification?",
 ];
 
 export function AdvisorSuggestedPrompts({ onSelect }: { onSelect: (prompt: string) => void }) {

@@ -3,10 +3,10 @@ questions. Tools: get_transactions, calculate_budget_projection,
 calculate_emergency_fund, calculate_loan_payment, calculate_investment_growth.
 
 search_transactions_semantic and categorize_transaction (also named for
-Budget Coach in architecture.md §13.1) are deferred to Phase 6 alongside the
-pgvector-backed RAG knowledge base — semantic search needs the same
-embedding infra RAG does, and categorization already has a working rules
-engine on the TS side (apps/web/features/transactions).
+Budget Coach in architecture.md §13.1) are deferred — semantic search over
+the user's own transactions would need its own embedding pipeline distinct
+from the RAG knowledge base (Phase 6), and categorization already has a
+working rules engine on the TS side (apps/web/features/transactions).
 
 Non-negotiable rule (architecture.md §13.2): the LLM never computes money.
 Every numeric answer must come from a tool call result — the model narrates
@@ -15,13 +15,12 @@ it, it does not derive it.
 
 from __future__ import annotations
 
-import json
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
-from llm_client import LLMClient, StopEvent, TextEvent, ToolSpec, ToolUseEvent
+from agents._loop import AgentEvent, run_tool_calling_agent
+from llm_client import LLMClient, ToolSpec
 from privacy.redaction import redact
 from tools import calculators
 from tools.transactions import get_transactions
@@ -42,8 +41,10 @@ of your own.
 - Keep responses concise and conversational."""
 
 DISCLAIMER = "This is informational analysis, not licensed financial advice."
-
-MAX_TOOL_ROUNDS = 4
+NOT_CONFIGURED = (
+    "The AI advisor isn't configured yet (no ANTHROPIC_API_KEY set). "
+    "The rest of WealthPilot works fully without it."
+)
 
 TOOLS = [
     ToolSpec(
@@ -149,14 +150,6 @@ TOOLS = [
 ]
 
 
-@dataclass
-class AgentEvent:
-    type: str  # "text" | "tool_call" | "done" | "error"
-    text: str | None = None
-    tool_name: str | None = None
-    detail: dict[str, Any] | None = None
-
-
 async def _execute_tool(workspace_id: str, name: str, tool_input: dict[str, Any]) -> Any:
     if name == "get_transactions":
         start_date = tool_input.get("start_date")
@@ -217,75 +210,14 @@ async def _execute_tool(workspace_id: str, name: str, tool_input: dict[str, Any]
     raise ValueError(f"Unknown tool: {name}")
 
 
-async def run_budget_coach(
+def run_budget_coach(
     llm: LLMClient,
     workspace_id: str,
     conversation: list[dict[str, Any]],
 ) -> AsyncIterator[AgentEvent]:
-    """`conversation` is [{"role": "user"|"assistant", "content": str}, ...], oldest first."""
-    if not llm.configured:
-        yield AgentEvent(
-            type="error",
-            text=(
-                "The AI advisor isn't configured yet (no ANTHROPIC_API_KEY set). "
-                "The rest of WealthPilot works fully without it."
-            ),
-        )
-        return
+    async def execute(name: str, tool_input: dict[str, Any]) -> Any:
+        return await _execute_tool(workspace_id, name, tool_input)
 
-    messages: list[dict[str, Any]] = [dict(m) for m in conversation]
-
-    for _round in range(MAX_TOOL_ROUNDS):
-        text_buffer = ""
-        tool_calls: list[ToolUseEvent] = []
-
-        async for event in llm.stream(
-            system=SYSTEM_PROMPT, messages=messages, tools=TOOLS, max_tokens=1024
-        ):
-            if isinstance(event, TextEvent):
-                text_buffer += event.text
-                yield AgentEvent(type="text", text=event.text)
-            elif isinstance(event, ToolUseEvent):
-                tool_calls.append(event)
-            elif isinstance(event, StopEvent):
-                pass  # stop_reason isn't currently branched on
-
-        if not tool_calls:
-            yield AgentEvent(type="done", text=DISCLAIMER)
-            return
-
-        assistant_content: list[dict[str, Any]] = []
-        if text_buffer:
-            assistant_content.append({"type": "text", "text": text_buffer})
-        for call in tool_calls:
-            assistant_content.append(
-                {"type": "tool_use", "id": call.id, "name": call.name, "input": call.input}
-            )
-        messages.append({"role": "assistant", "content": assistant_content})
-
-        tool_result_content: list[dict[str, Any]] = []
-        for call in tool_calls:
-            yield AgentEvent(type="tool_call", tool_name=call.name, detail=call.input)
-            try:
-                result = await _execute_tool(workspace_id, call.name, call.input)
-                tool_result_content.append(
-                    {"type": "tool_result", "tool_use_id": call.id, "content": json.dumps(result)}
-                )
-            except Exception as exc:  # noqa: BLE001 - fed back to the model, not raised
-                tool_result_content.append(
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": call.id,
-                        "content": f"Error: {exc}",
-                        "is_error": True,
-                    }
-                )
-        messages.append({"role": "user", "content": tool_result_content})
-
-    yield AgentEvent(
-        type="error",
-        text=(
-            "I wasn't able to finish that within the allotted tool-call budget — "
-            "try a more specific question."
-        ),
+    return run_tool_calling_agent(
+        llm, SYSTEM_PROMPT, TOOLS, execute, conversation, DISCLAIMER, NOT_CONFIGURED
     )

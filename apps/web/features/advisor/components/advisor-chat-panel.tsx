@@ -42,8 +42,8 @@ export function AdvisorChatPanel() {
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
             <p className="max-w-sm text-sm text-muted-foreground">
-              Ask the Budget Coach about your spending, budget, or savings — every number it
-              gives you comes straight from your real transactions.
+              Ask about your spending, portfolio, or month — every number the advisor gives you
+              comes straight from your real data.
             </p>
             <AdvisorSuggestedPrompts onSelect={(prompt) => void sendMessage(prompt)} />
           </div>
@@ -57,7 +57,7 @@ export function AdvisorChatPanel() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask about your spending, budget, or savings…"
+          placeholder="Ask about your spending, portfolio, or savings…"
           className="min-h-9 py-1.5"
           rows={1}
           disabled={isStreaming}

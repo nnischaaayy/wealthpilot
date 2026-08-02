@@ -9,8 +9,12 @@ from pydantic import BaseModel
 
 load_dotenv()
 
+from agents._loop import AgentEvent  # noqa: E402
 from agents.budget_coach import run_budget_coach  # noqa: E402
+from agents.portfolio_analyst import run_portfolio_analyst  # noqa: E402
+from agents.report_summarizer import run_report_summarizer  # noqa: E402
 from agents.router import Intent, classify_intent  # noqa: E402
+from embedding_client import EmbeddingClient  # noqa: E402
 from llm_client import LLMClient  # noqa: E402
 
 app = FastAPI(title="WealthPilot AI Service")
@@ -31,24 +35,22 @@ class ChatRequest(BaseModel):
     messages: list[ChatMessage]
 
 
-# Portfolio Analyst and Report Summarizer land in Phase 6 alongside RAG
-# (architecture.md §17). Until then the router still classifies these
-# intents so the user gets an honest "not yet" instead of Budget Coach
-# trying (and failing) to answer a question outside its tool set.
-_NOT_YET_AVAILABLE: dict[Intent, str] = {
-    Intent.PORTFOLIO: (
-        "Portfolio analysis through the AI advisor is coming in a later phase — for now, "
-        "check the Portfolio page for allocation, gain/loss, and risk score."
-    ),
-    Intent.REPORT: (
-        "Monthly/quarterly summaries through the AI advisor are coming in a later phase — "
-        "for now, check the Dashboard page for your KPIs and cash flow."
-    ),
-}
-
-
 def _sse(event: dict[str, object]) -> str:
     return f"data: {json.dumps(event)}\n\n"
+
+
+def _run_agent(
+    intent: Intent,
+    llm: LLMClient,
+    workspace_id: str,
+    conversation: list[dict[str, str]],
+    embedding_client: EmbeddingClient,
+) -> AsyncIterator[AgentEvent]:
+    if intent is Intent.PORTFOLIO:
+        return run_portfolio_analyst(llm, workspace_id, conversation)
+    if intent is Intent.REPORT:
+        return run_report_summarizer(llm, workspace_id, conversation, embedding_client)
+    return run_budget_coach(llm, workspace_id, conversation)
 
 
 async def _stream_chat(workspace_id: str, messages: list[ChatMessage]) -> AsyncIterator[str]:
@@ -57,14 +59,11 @@ async def _stream_chat(workspace_id: str, messages: list[ChatMessage]) -> AsyncI
         return
 
     intent = classify_intent(messages[-1].content)
-    not_yet_available = _NOT_YET_AVAILABLE.get(intent)
-    if not_yet_available is not None:
-        yield _sse({"type": "done", "text": not_yet_available})
-        return
-
     llm = LLMClient()
+    embedding_client = EmbeddingClient()
     conversation = [{"role": m.role, "content": m.content} for m in messages]
-    async for event in run_budget_coach(llm, workspace_id, conversation):
+
+    async for event in _run_agent(intent, llm, workspace_id, conversation, embedding_client):
         yield _sse(
             {
                 "type": event.type,

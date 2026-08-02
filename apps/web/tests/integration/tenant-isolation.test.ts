@@ -10,6 +10,13 @@ import {
 } from "@/features/transactions/server/service";
 import { getDashboardSummary, getCategoryBreakdown } from "@/features/dashboard/server/service";
 import { listWorkspacesForUser } from "@/features/workspace/server/service";
+import {
+  createHolding,
+  deleteHolding,
+  getPortfolioAnalytics,
+  listHoldings,
+  updateHolding,
+} from "@/features/portfolio/server/service";
 import { createTestWorkspace, cleanupWorkspace } from "./helpers";
 
 // Every one of these exercises the same threat model: workspace A's context
@@ -21,6 +28,7 @@ describe("tenant isolation (live Postgres)", () => {
   let a: Awaited<ReturnType<typeof createTestWorkspace>>;
   let b: Awaited<ReturnType<typeof createTestWorkspace>>;
   let bTransactionId: string;
+  let bHoldingId: string;
 
   beforeAll(async () => {
     a = await createTestWorkspace("tenant-a");
@@ -42,6 +50,15 @@ describe("tenant isolation (live Postgres)", () => {
     });
     bTransactionId = transaction.id;
     expect(outcome.status).toBe("done"); // sanity check the fixture uploaded
+
+    const bHolding = await createHolding(b.workspace.id, b.user.id, {
+      accountId: b.account.id,
+      symbol: "BSECRET",
+      quantity: 5,
+      costBasis: 200,
+      assetClass: "equity",
+    });
+    bHoldingId = bHolding.id;
   });
 
   afterAll(async () => {
@@ -110,5 +127,50 @@ describe("tenant isolation (live Postgres)", () => {
     const workspaces = await listWorkspacesForUser(a.user.id);
     expect(workspaces.find((w) => w.id === b.workspace.id)).toBeUndefined();
     expect(workspaces.find((w) => w.id === a.workspace.id)).toBeDefined();
+  });
+
+  it("listHoldings never returns another workspace's holdings", async () => {
+    const holdings = await listHoldings(a.workspace.id);
+    expect(holdings.find((h) => h.id === bHoldingId)).toBeUndefined();
+  });
+
+  it("createHolding rejects an account id from another workspace", async () => {
+    await expect(
+      createHolding(a.workspace.id, a.user.id, {
+        accountId: b.account.id,
+        symbol: "HACK",
+        quantity: 1,
+        costBasis: 1,
+        assetClass: "equity",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("updateHolding rejects a holding id from another workspace", async () => {
+    await expect(
+      updateHolding(a.workspace.id, a.user.id, bHoldingId, {
+        accountId: a.account.id,
+        symbol: "HACKED",
+        quantity: 1,
+        costBasis: 1,
+        assetClass: "equity",
+      }),
+    ).rejects.toThrow();
+
+    const untouched = await prisma.holding.findUniqueOrThrow({ where: { id: bHoldingId } });
+    expect(untouched.symbol).toBe("BSECRET");
+  });
+
+  it("deleteHolding rejects a holding id from another workspace", async () => {
+    await expect(deleteHolding(a.workspace.id, a.user.id, bHoldingId)).rejects.toThrow();
+
+    const stillThere = await prisma.holding.findUnique({ where: { id: bHoldingId } });
+    expect(stillThere).not.toBeNull();
+  });
+
+  it("getPortfolioAnalytics for workspace A excludes workspace B's holdings", async () => {
+    const analytics = await getPortfolioAnalytics(a.workspace.id);
+    expect(analytics.hasHoldings).toBe(false);
+    expect(analytics.holdings).toEqual([]);
   });
 });

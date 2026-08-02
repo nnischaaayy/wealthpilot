@@ -22,6 +22,7 @@ model Workspace {
   transactions  Transaction[]
   categoryRules CategoryRule[]
   uploadJobs    UploadJob[]
+  holdings      Holding[]
 
   @@map("workspaces")
 }
@@ -92,6 +93,7 @@ model Account {
   workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   uploadJobs   UploadJob[]
+  holdings     Holding[]
 
   @@index([workspaceId])
   @@map("accounts")
@@ -176,4 +178,39 @@ model UploadJob {
   @@unique([workspaceId, idempotencyKey])
   @@index([workspaceId, createdAt])
   @@map("upload_jobs")
+}
+
+enum AssetClass {
+  equity
+  bond
+  cash
+  real_estate
+  commodity
+  crypto
+  other
+}
+
+model Holding {
+  id                String     @id @default(cuid())
+  workspaceId       String
+  accountId         String
+  symbol            String
+  name              String?
+  quantity          Float // fractional shares/units allowed
+  // Both prices are per-unit, integer minor units — costBasisMinor is the
+  // average price paid; currentPriceMinor is manually entered/updated by the
+  // user (v1 has no live market-data feed — see architecture.md §8
+  // connectors/, planned for a later phase) and stays null until they set it.
+  costBasisMinor    Int
+  currentPriceMinor Int?
+  currency          String
+  assetClass        AssetClass @default(equity)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  account   Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("holdings")
 }

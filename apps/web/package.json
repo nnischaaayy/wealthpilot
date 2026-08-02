@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --exclude \"tests/integration/**\"",
+    "test:integration": "vitest run tests/integration",
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

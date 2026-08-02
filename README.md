@@ -27,8 +27,9 @@ Install once from the repo root (npm workspaces link `packages/*` for you):
 
 ```bash
 npm install
-npm run dev         # http://localhost:3000
-npm run test        # Vitest
+npm run dev              # http://localhost:3000
+npm run test              # Vitest — pure unit tests, no DB required
+npm run test:integration  # Vitest — needs a live Postgres (docker compose up, migrations applied)
 npm run lint
 npm run typecheck
 npm run build
@@ -74,3 +75,4 @@ Building phase-by-phase per [docs/architecture.md § 17](docs/architecture.md#17
 - **Phase 1 — auth, workspace, DB schema, protected shell, design tokens**: complete. Signup, login, logout, and workspace create/switch verified end-to-end against a live local Postgres.
 - **Phase 2 — statement upload, parsing, categorization, transactions table**: complete. CSV/XLSX parsing with bank-format auto-detection (day-first dates, debit/credit or signed-amount columns), a manual column-mapping fallback for unrecognized formats, rule-based categorization (built-in keyword rules + per-workspace learned rules from inline corrections), and a filterable/sortable/paginated transactions table — all verified against live Postgres with a real sample statement.
 - **Phase 3 — dashboard (KPIs, cash flow, category breakdown, 50/30/20 budget)**: complete. Net worth, this-month cash flow, and savings-rate KPI cards; a 6-month cash-flow bar chart and category-spend donut (Recharts, categorical palette validated via the dataviz skill's contrast/CVD checker); a 50/30/20 budget view on `/budgets`; first-class empty/loading/error states on every data view; every chart paired with an accessible data-table alternative. Verified against live Postgres with real multi-category transaction data — KPI math, category-capping/"Other" folding, and 50/30/20 grouping all confirmed correct.
+- **Post-Phase-3 hardening**: fixed three gaps caught by a self-audit — (1) CI (`.github/workflows/ci.yml`) had never actually run (no git remote) and would have failed on a fresh checkout: added a Postgres service container, a `prisma generate` step, and `DATABASE_URL`; (2) added a real Postgres-backed integration test suite (`apps/web/tests/integration/upload-pipeline.test.ts`) for the upload→parse→categorize→persist pipeline, previously only verified manually; (3) added an automated cross-tenant-isolation suite (`apps/web/tests/integration/tenant-isolation.test.ts`) per architecture.md §14/§15, checking that every workspace-scoped service function rejects or excludes another workspace's data. All three verified locally by actually running them, not just written and assumed to work.

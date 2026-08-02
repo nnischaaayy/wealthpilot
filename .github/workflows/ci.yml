@@ -5,10 +5,27 @@ on:
   push:
     branches: [main]
 
+env:
+  DATABASE_URL: postgresql://wealthpilot:wealthpilot@localhost:5432/wealthpilot
+
 jobs:
   web:
-    name: web (lint, typecheck, test, build)
+    name: web (lint, typecheck, test, integration, build)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: wealthpilot
+          POSTGRES_PASSWORD: wealthpilot
+          POSTGRES_DB: wealthpilot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wealthpilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -16,9 +33,16 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Generate Prisma client
+        working-directory: packages/db
+        run: npx prisma generate
+      - name: Apply migrations
+        working-directory: packages/db
+        run: npx prisma migrate deploy
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test
+      - run: npm run test:integration
       - run: npm run build
 
   ai-service:

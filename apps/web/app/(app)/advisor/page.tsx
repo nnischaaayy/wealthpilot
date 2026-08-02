@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
-import { PlaceholderPage } from "@/components/layout/placeholder-page";
+import { AdvisorChatPanel } from "@/features/advisor/components/advisor-chat-panel";
 
 export const metadata: Metadata = { title: "AI Advisor — WealthPilot" };
 
 export default function AdvisorPage() {
   return (
-    <PlaceholderPage
-      title="AI Advisor"
-      description="A grounded chat advisor — budget coaching, portfolio analysis, and statement summaries with cited sources — lands with the ai-service."
-      phase="Phase 5 / Phase 6"
-    />
+    <div className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">AI Advisor</h1>
+        <p className="text-sm text-muted-foreground">
+          Budget Coach — spending, budgeting, and savings questions, grounded in your own data.
+        </p>
+      </div>
+      <AdvisorChatPanel />
+    </div>
   );
 }

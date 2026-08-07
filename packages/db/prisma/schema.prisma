@@ -14,15 +14,21 @@ enum WorkspaceRole {
 model Workspace {
   id        String   @id @default(cuid())
   name      String
+  // AI data-usage toggle (architecture.md §4 "Settings & data controls") —
+  // when false, the /advisor chat proxy refuses rather than forwarding the
+  // workspace's data to ai-service. Defaults on since the AI advisor is a
+  // core P0 feature; this is an opt-out, not an opt-in.
+  aiEnabled Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  members       WorkspaceMember[]
-  auditLogs     AuditLog[]
-  accounts      Account[]
-  transactions  Transaction[]
-  categoryRules CategoryRule[]
-  uploadJobs    UploadJob[]
-  holdings      Holding[]
+  members         WorkspaceMember[]
+  auditLogs       AuditLog[]
+  accounts        Account[]
+  transactions    Transaction[]
+  categoryRules   CategoryRule[]
+  uploadJobs      UploadJob[]
+  holdings        Holding[]
+  categoryBudgets CategoryBudget[]
 
   @@map("workspaces")
 }
@@ -144,6 +150,30 @@ model CategoryRule {
   @@map("category_rules")
 }
 
+// Configurable per-category monthly limits (architecture.md §4 "Budgets &
+// alerts", P1) — distinct from the fixed 50/30/20 group targets (Phase 3):
+// this is a user-set limit per individual category, e.g. "dining <= $200/mo".
+model CategoryBudget {
+  id          String   @id @default(cuid())
+  workspaceId String
+  category    String
+  limitMinor  Int
+  currency    String
+  // "2026-08" — the last calendar month an over-limit email alert was sent
+  // for this budget, so re-checking on every dashboard/budgets page load
+  // (no job scheduler in v1) sends at most one email per category per month
+  // instead of one per page view.
+  lastAlertedMonth String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, category])
+  @@index([workspaceId])
+  @@map("category_budgets")
+}
+
 enum UploadJobStatus {
   pending
   mapping_required
@@ -222,6 +252,12 @@ model Holding {
 // asyncpg (same read-only-relative-to-Prisma-schema pattern as
 // tools/transactions.py and tools/holdings.py, except this table is also
 // written to — by the offline seed script, not at request time).
+//
+// Migration gotcha: `Unsupported` columns carry no index metadata, so every
+// `prisma migrate dev` diff against this model proposes
+// `DROP INDEX "knowledge_articles_embedding_idx"` — the hand-written HNSW
+// index from the add_knowledge_articles migration. Always strip that line
+// from a freshly generated migration.sql before applying it.
 model KnowledgeArticle {
   id        String                     @id @default(cuid())
   slug      String                     @unique

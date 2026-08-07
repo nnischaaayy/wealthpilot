@@ -17,6 +17,7 @@ import {
   listHoldings,
   updateHolding,
 } from "@/features/portfolio/server/service";
+import { deleteCategoryBudget, listCategoryBudgets, upsertCategoryBudget } from "@/features/budgets/server/service";
 import { createTestWorkspace, cleanupWorkspace } from "./helpers";
 
 // Every one of these exercises the same threat model: workspace A's context
@@ -29,6 +30,7 @@ describe("tenant isolation (live Postgres)", () => {
   let b: Awaited<ReturnType<typeof createTestWorkspace>>;
   let bTransactionId: string;
   let bHoldingId: string;
+  let bCategoryBudgetId: string;
 
   beforeAll(async () => {
     a = await createTestWorkspace("tenant-a");
@@ -59,6 +61,9 @@ describe("tenant isolation (live Postgres)", () => {
       assetClass: "equity",
     });
     bHoldingId = bHolding.id;
+
+    const bBudget = await upsertCategoryBudget(b.workspace.id, b.user.id, "dining", 20000, "USD");
+    bCategoryBudgetId = bBudget.id;
   });
 
   afterAll(async () => {
@@ -172,5 +177,19 @@ describe("tenant isolation (live Postgres)", () => {
     const analytics = await getPortfolioAnalytics(a.workspace.id);
     expect(analytics.hasHoldings).toBe(false);
     expect(analytics.holdings).toEqual([]);
+  });
+
+  it("listCategoryBudgets never returns another workspace's budgets", async () => {
+    const budgets = await listCategoryBudgets(a.workspace.id);
+    expect(budgets.find((budget) => budget.id === bCategoryBudgetId)).toBeUndefined();
+  });
+
+  it("deleteCategoryBudget rejects a budget id from another workspace", async () => {
+    await expect(
+      deleteCategoryBudget(a.workspace.id, a.user.id, bCategoryBudgetId),
+    ).rejects.toThrow();
+
+    const stillThere = await prisma.categoryBudget.findUnique({ where: { id: bCategoryBudgetId } });
+    expect(stillThere).not.toBeNull();
   });
 });

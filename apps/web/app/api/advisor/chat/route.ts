@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { prisma } from "@wealthpilot/db";
 import { requireActiveWorkspace } from "@/lib/workspace-context";
 
 const chatRequestSchema = z.object({
@@ -19,12 +20,25 @@ const chatRequestSchema = z.object({
  * authenticates the user and resolves their workspace membership before
  * forwarding workspace_id to ai-service, which trusts it as already-validated.
  */
+function sseError(text: string): Response {
+  return new Response(`data: ${JSON.stringify({ type: "error", text })}\n\n`, {
+    headers: { "Content-Type": "text/event-stream" },
+  });
+}
+
 export async function POST(request: Request) {
   const { workspaceId } = await requireActiveWorkspace();
 
   const body = chatRequestSchema.safeParse(await request.json());
   if (!body.success) {
     return Response.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  const workspace = await prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId } });
+  if (!workspace.aiEnabled) {
+    return sseError(
+      "The AI advisor is turned off for this workspace. Turn it back on in Settings to use it.",
+    );
   }
 
   const aiServiceUrl = process.env.AI_SERVICE_URL;

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PiggyBank } from "lucide-react";
+import { prisma } from "@wealthpilot/db";
 import { requireActiveWorkspace } from "@/lib/workspace-context";
 import { formatMoney } from "@/lib/format-money";
 import { getCategoryGroup, type BudgetGroup } from "@/lib/categories";
@@ -10,14 +11,16 @@ import {
   getCategoryBreakdownFull,
   getDashboardSummary,
 } from "@/features/dashboard/server/service";
+import { listCategoryBudgets, sendDueBudgetAlerts } from "@/features/budgets/server/service";
 import { BudgetGroupBars } from "@/features/dashboard/components/budget-group-bars";
+import { CategoryBudgetList } from "@/features/budgets/components/category-budget-list";
 
 export const metadata: Metadata = { title: "Budgets — WealthPilot" };
 
 const GROUP_ORDER: Extract<BudgetGroup, "needs" | "wants" | "savings">[] = ["needs", "wants", "savings"];
 
 export default async function BudgetsPage() {
-  const { workspaceId } = await requireActiveWorkspace();
+  const { userId, workspaceId } = await requireActiveWorkspace();
   const summary = await getDashboardSummary(workspaceId);
 
   if (!summary.hasTransactions || !summary.currency) {
@@ -36,10 +39,17 @@ export default async function BudgetsPage() {
   }
 
   const currency = summary.currency;
-  const [budget, categories] = await Promise.all([
+  const [budget, categories, categoryBudgets, user] = await Promise.all([
     getBudgetGroups(workspaceId, currency),
     getCategoryBreakdownFull(workspaceId, currency),
+    listCategoryBudgets(workspaceId),
+    prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { email: true } }),
   ]);
+
+  // No job scheduler in v1 — over-limit alerts are checked (and, at most
+  // once per category per month, emailed) whenever this page loads. See
+  // sendDueBudgetAlerts's lastAlertedMonth dedup.
+  await sendDueBudgetAlerts(workspaceId, user.email);
 
   const categoriesByGroup = new Map<string, typeof categories>();
   for (const group of GROUP_ORDER) categoriesByGroup.set(group, []);
@@ -103,9 +113,18 @@ export default async function BudgetsPage() {
         })}
       </div>
 
-      <p className="text-muted-foreground text-xs">
-        Configurable per-category limits and threshold alerts land in Phase 7.
-      </p>
+      <Card>
+        <CardHeader>
+          <CardTitle>Category budgets</CardTitle>
+          <CardDescription>
+            Set a monthly limit per category — you&apos;ll get an in-app and email alert the first
+            time you go over it each month.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CategoryBudgetList budgets={categoryBudgets} currency={currency} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

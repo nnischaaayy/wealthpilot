@@ -62,7 +62,7 @@ export function AdvisorChatPanel() {
           rows={1}
           disabled={isStreaming}
         />
-        <Button type="submit" size="icon" disabled={isStreaming || !input.trim()}>
+        <Button type="submit" size="icon" aria-label="Send message" disabled={isStreaming || !input.trim()}>
           <Send className="size-4" />
         </Button>
       </form>

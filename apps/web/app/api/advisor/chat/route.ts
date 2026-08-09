@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@wealthpilot/db";
 import { requireActiveWorkspace } from "@/lib/workspace-context";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const chatRequestSchema = z.object({
   messages: z
@@ -26,12 +27,22 @@ function sseError(text: string): Response {
   });
 }
 
+// 20 messages per 5-minute window sustained, bursts up to 20 — generous
+// enough for a real back-and-forth conversation while blocking a scripted
+// flood against the (metered) LLM provider.
+const CHAT_RATE_LIMIT = { capacity: 20, refillPerSecond: 20 / 300 };
+
 export async function POST(request: Request) {
   const { workspaceId } = await requireActiveWorkspace();
 
   const body = chatRequestSchema.safeParse(await request.json());
   if (!body.success) {
     return Response.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  const { allowed } = await checkRateLimit(`chat:${workspaceId}`, CHAT_RATE_LIMIT);
+  if (!allowed) {
+    return sseError("You've sent a lot of messages — please slow down and try again shortly.");
   }
 
   const workspace = await prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId } });

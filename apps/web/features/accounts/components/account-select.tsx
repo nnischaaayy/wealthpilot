@@ -71,7 +71,7 @@ export function AccountSelect({
         value={value ?? ""}
         onValueChange={(v) => v && onChange(v)}
       >
-        <SelectTrigger className="w-56">
+        <SelectTrigger className="w-56" aria-label="Account">
           <SelectValue placeholder="Choose an account" />
         </SelectTrigger>
         <SelectContent>

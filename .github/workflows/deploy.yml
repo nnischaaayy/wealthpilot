@@ -1,0 +1,76 @@
+name: Deploy
+
+# architecture.md §16 — on merge to main: deploy to staging automatically;
+# production via manual approval gate (a GitHub Environment named
+# "production" with required reviewers, configured in repo settings).
+#
+# Inert until the required secrets exist: every job below is gated on the
+# corresponding secret being present, so this workflow is safe to merge and
+# simply no-ops (skips) until someone wires up real Vercel/Fly.io accounts —
+# it does not fail CI, and it does not deploy anywhere without credentials.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-web-staging:
+    name: Deploy apps/web to Vercel (staging)
+    runs-on: ubuntu-latest
+    environment: staging
+    if: ${{ vars.VERCEL_PROJECT_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        run: npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes
+        env:
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+
+  deploy-ai-service-staging:
+    name: Deploy apps/ai-service to Fly.io (staging)
+    runs-on: ubuntu-latest
+    environment: staging
+    if: ${{ vars.FLY_APP_NAME != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        working-directory: apps/ai-service
+        run: flyctl deploy --remote-only --app ${{ vars.FLY_APP_NAME }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  # Production deploys are the same two jobs, gated behind a GitHub
+  # Environment named "production" with required reviewers — add that
+  # protection rule in repo Settings → Environments before this does
+  # anything on merge; until then this job is defined but never approved.
+  deploy-web-production:
+    name: Deploy apps/web to Vercel (production)
+    runs-on: ubuntu-latest
+    environment: production
+    needs: [deploy-web-staging]
+    if: ${{ vars.VERCEL_PROJECT_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+        env:
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+
+  deploy-ai-service-production:
+    name: Deploy apps/ai-service to Fly.io (production)
+    runs-on: ubuntu-latest
+    environment: production
+    needs: [deploy-ai-service-staging]
+    if: ${{ vars.FLY_APP_NAME != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        working-directory: apps/ai-service
+        run: flyctl deploy --remote-only --app ${{ vars.FLY_APP_NAME_PROD }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

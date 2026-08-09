@@ -33,7 +33,7 @@ export function TransactionsFilterBar() {
         value={category || "all"}
         onValueChange={(v) => setFilters({ category: v === "all" ? null : v, page: 1 })}
       >
-        <SelectTrigger className="w-48">
+        <SelectTrigger className="w-48" aria-label="Filter by category">
           <SelectValue placeholder="All categories" />
         </SelectTrigger>
         <SelectContent>

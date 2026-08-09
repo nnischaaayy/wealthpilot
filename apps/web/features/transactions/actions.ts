@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireActiveWorkspace } from "@/lib/workspace-context";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidCategory } from "@/lib/categories";
 import {
   confirmMapping,
@@ -19,8 +20,18 @@ export interface UploadActionResult {
   outcome?: UploadOutcome;
 }
 
+// 10 uploads/hour sustained, bursts up to 10 — statement uploads are
+// infrequent by nature (one per statement period), so this comfortably
+// covers real usage while blocking a scripted flood.
+const UPLOAD_RATE_LIMIT = { capacity: 10, refillPerSecond: 10 / 3600 };
+
 export async function uploadStatementAction(formData: FormData): Promise<UploadActionResult> {
   const { workspaceId } = await requireActiveWorkspace();
+
+  const { allowed } = await checkRateLimit(`upload:${workspaceId}`, UPLOAD_RATE_LIMIT);
+  if (!allowed) {
+    return { error: "Too many uploads — please wait a bit before trying again." };
+  }
 
   const file = formData.get("file");
   const accountId = formData.get("accountId");

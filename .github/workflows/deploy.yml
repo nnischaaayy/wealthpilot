@@ -21,7 +21,7 @@ jobs:
     environment: staging
     if: ${{ vars.VERCEL_PROJECT_ID != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Deploy
         run: npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes
         env:
@@ -34,7 +34,7 @@ jobs:
     environment: staging
     if: ${{ vars.FLY_APP_NAME != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy
         working-directory: apps/ai-service
@@ -53,7 +53,7 @@ jobs:
     needs: [deploy-web-staging]
     if: ${{ vars.VERCEL_PROJECT_ID != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Deploy
         run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
         env:
@@ -67,7 +67,7 @@ jobs:
     needs: [deploy-ai-service-staging]
     if: ${{ vars.FLY_APP_NAME != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy
         working-directory: apps/ai-service

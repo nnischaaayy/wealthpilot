@@ -98,6 +98,32 @@ async def test_tool_call_result_is_fed_back_into_the_next_round() -> None:
     assert events[-1].type == "done"
 
 
+async def test_income_split_tool_needs_no_transaction_data() -> None:
+    backend = ScriptedBackend(
+        [
+            [
+                ToolUseEvent(
+                    id="t1",
+                    name="calculate_income_split",
+                    input={"monthly_income_minor": 400_000},
+                ),
+                StopEvent("tool_use"),
+            ],
+            [TextEvent("Here's a 50/30/20 split."), StopEvent("end_turn")],
+        ]
+    )
+    llm = LLMClient(backend=backend)
+
+    await _collect(
+        run_budget_coach(llm, "ws-1", [{"role": "user", "content": "split 4000 income?"}])
+    )
+
+    second_call_messages = backend.calls[1]["messages"]
+    result_payload = json.loads(second_call_messages[-1]["content"][0]["content"])
+    by_group = {r["group"]: r["target_minor"] for r in result_payload}
+    assert by_group == {"needs": 200_000, "wants": 120_000, "savings": 80_000}
+
+
 async def test_get_transactions_tool_redacts_descriptions_before_reaching_the_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

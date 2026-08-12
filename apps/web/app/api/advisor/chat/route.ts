@@ -3,6 +3,12 @@ import { prisma } from "@wealthpilot/db";
 import { requireActiveWorkspace } from "@/lib/workspace-context";
 import { checkRateLimit } from "@/lib/rate-limit";
 
+// Streaming a full LLM response can run past Vercel's default serverless
+// function duration (10s on Hobby) — especially against a free-tier
+// ai-service host that may still be warming a connection. 60s is the max
+// allowed on the Hobby plan.
+export const maxDuration = 60;
+
 const chatRequestSchema = z.object({
   messages: z
     .array(

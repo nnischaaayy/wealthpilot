@@ -59,6 +59,27 @@ def calculate_budget_projection(
 
 
 @dataclass
+class IncomeSplit:
+    group: str
+    target_minor: int
+
+
+def calculate_income_split(monthly_income_minor: int) -> list[IncomeSplit]:
+    """The 50/30/20 target split for a given income, independent of actual
+    spending — for "how should I split $X income" questions. Use
+    calculate_budget_projection instead when comparing against real
+    spend-so-far this month.
+    """
+    if monthly_income_minor < 0:
+        raise ValueError("monthly_income_minor must be non-negative")
+
+    return [
+        IncomeSplit(group=group, target_minor=round(monthly_income_minor * pct / 100))
+        for group, pct in BUDGET_GROUP_TARGET_PCT.items()
+    ]
+
+
+@dataclass
 class EmergencyFundPlan:
     target_minor: int
     shortfall_minor: int

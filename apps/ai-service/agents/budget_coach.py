@@ -37,6 +37,10 @@ financial advice.
 - Never compute money yourself. Every number you state about the user's finances must come from a \
 tool call result you were given in this conversation — narrate it, do not derive it by arithmetic \
 of your own.
+- For general or hypothetical "how should I split $X income" questions, use \
+calculate_income_split — it needs only the income figure, not real spending data. Use \
+calculate_budget_projection instead only when comparing against the user's actual spending so \
+far this month (gather it with get_transactions first).
 - When you state a number, briefly say what transactions or calculation it's based on.
 - Keep responses concise and conversational."""
 
@@ -97,6 +101,18 @@ TOOLS = [
                 "days_elapsed",
                 "days_in_month",
             ],
+        },
+    ),
+    ToolSpec(
+        name="calculate_income_split",
+        description=(
+            "Splits a given monthly income into 50/30/20 targets (needs/wants/savings). Use for "
+            "general or hypothetical income-split questions — no real transaction data needed."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {"monthly_income_minor": {"type": "integer"}},
+            "required": ["monthly_income_minor"],
         },
     ),
     ToolSpec(
@@ -185,6 +201,11 @@ async def _execute_tool(workspace_id: str, name: str, tool_input: dict[str, Any]
             days_in_month=tool_input["days_in_month"],
         )
         return [r.__dict__ for r in results]
+    if name == "calculate_income_split":
+        results = calculators.calculate_income_split(
+            monthly_income_minor=tool_input["monthly_income_minor"]
+        )
+        return [r.__dict__ for r in results]
     if name == "calculate_emergency_fund":
         plan = calculators.calculate_emergency_fund(
             monthly_essential_expenses_minor=tool_input["monthly_essential_expenses_minor"],
@@ -215,9 +236,14 @@ def run_budget_coach(
     workspace_id: str,
     conversation: list[dict[str, Any]],
 ) -> AsyncIterator[AgentEvent]:
+    # The model has no inherent notion of "today" — without this, questions
+    # needing days_elapsed/days_in_month for calculate_budget_projection are
+    # unanswerable, since it correctly won't guess at real calendar facts.
+    system_prompt = f"{SYSTEM_PROMPT}\n\nToday's date is {date.today().isoformat()}."
+
     async def execute(name: str, tool_input: dict[str, Any]) -> Any:
         return await _execute_tool(workspace_id, name, tool_input)
 
     return run_tool_calling_agent(
-        llm, SYSTEM_PROMPT, TOOLS, execute, conversation, DISCLAIMER, NOT_CONFIGURED
+        llm, system_prompt, TOOLS, execute, conversation, DISCLAIMER, NOT_CONFIGURED
     )

@@ -3,6 +3,7 @@ import pytest
 from tools.calculators import (
     calculate_budget_projection,
     calculate_emergency_fund,
+    calculate_income_split,
     calculate_investment_growth,
     calculate_loan_payment,
 )
@@ -49,6 +50,18 @@ class TestBudgetProjection:
     def test_rejects_negative_income(self) -> None:
         with pytest.raises(ValueError):
             calculate_budget_projection(-1, {}, days_elapsed=1, days_in_month=30)
+
+
+class TestIncomeSplit:
+    def test_splits_income_by_the_50_30_20_targets(self) -> None:
+        results = calculate_income_split(400_000)
+        by_group = {r.group: r.target_minor for r in results}
+
+        assert by_group == {"needs": 200_000, "wants": 120_000, "savings": 80_000}
+
+    def test_rejects_negative_income(self) -> None:
+        with pytest.raises(ValueError):
+            calculate_income_split(-1)
 
 
 class TestEmergencyFund:

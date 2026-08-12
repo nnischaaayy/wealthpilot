@@ -1,9 +1,9 @@
 # Fly.io deploy config (architecture.md §16) — a long-lived container for
 # SSE streaming + background ingestion, unlike serverless apps/web.
 # Deploy with: fly launch --config fly.toml / fly deploy
-# Requires (fly secrets set ...): ANTHROPIC_API_KEY, VOYAGE_API_KEY,
-# DATABASE_URL_AI, REDIS_URL — all optional/gracefully-degrading per their
-# respective phase except DATABASE_URL_AI.
+# Requires (fly secrets set ...): DATABASE_URL_AI, and either
+# ANTHROPIC_API_KEY/VOYAGE_API_KEY or the free-tier GEMINI_API_KEY fallback,
+# plus REDIS_URL — all optional/gracefully-degrading except DATABASE_URL_AI.
 app = "wealthpilot-ai-service"
 primary_region = "iad"
 

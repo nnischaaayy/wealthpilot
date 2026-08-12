@@ -16,6 +16,7 @@ class FakeBackend:
 
 async def test_not_configured_without_an_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("VOYAGE_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     client = EmbeddingClient()
     assert client.configured is False
 

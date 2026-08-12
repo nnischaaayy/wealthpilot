@@ -28,8 +28,8 @@ async def seed() -> None:
     embedding_client = EmbeddingClient()
     if not embedding_client.configured:
         print(
-            "VOYAGE_API_KEY is not set — skipping KB seed. "
-            "Set it in apps/ai-service/.env to embed the knowledge base."
+            "VOYAGE_API_KEY / GEMINI_API_KEY is not set — skipping KB seed. "
+            "Set one of them in apps/ai-service/.env to embed the knowledge base."
         )
         return
 

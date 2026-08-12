@@ -12,6 +12,7 @@ async def test_not_configured_yields_a_single_graceful_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     llm = LLMClient()
 
     events = await _collect(

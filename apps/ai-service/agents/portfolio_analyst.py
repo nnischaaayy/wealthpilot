@@ -39,7 +39,7 @@ result you were given in this conversation — narrate it, do not derive it by a
 
 DISCLAIMER = "This is informational analysis, not licensed investment advice."
 NOT_CONFIGURED = (
-    "The AI advisor isn't configured yet (no ANTHROPIC_API_KEY set). "
+    "The AI advisor isn't configured yet (no ANTHROPIC_API_KEY or GEMINI_API_KEY set). "
     "The rest of WealthPilot works fully without it."
 )
 

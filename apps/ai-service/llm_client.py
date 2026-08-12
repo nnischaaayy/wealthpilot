@@ -13,7 +13,9 @@ from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-DEFAULT_MODEL = "claude-sonnet-5"
+DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-5"
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = DEFAULT_ANTHROPIC_MODEL  # kept for backward compatibility
 
 
 @dataclass(frozen=True)
@@ -57,7 +59,7 @@ class AnthropicLike(Protocol):
 
 class LLMClient:
     def __init__(self, backend: AnthropicLike | None = None, model: str | None = None) -> None:
-        self._model = model or os.environ.get("ANTHROPIC_MODEL", DEFAULT_MODEL)
+        self._model = model or _default_model()
         self._backend = backend if backend is not None else _make_default_backend()
 
     @property
@@ -73,7 +75,9 @@ class LLMClient:
         max_tokens: int = 1024,
     ) -> AsyncIterator[LLMEvent]:
         if self._backend is None:
-            raise RuntimeError("LLMClient is not configured (ANTHROPIC_API_KEY unset)")
+            raise RuntimeError(
+                "LLMClient is not configured (ANTHROPIC_API_KEY or GEMINI_API_KEY unset)"
+            )
 
         anthropic_tools = [
             {"name": t.name, "description": t.description, "input_schema": t.input_schema}
@@ -89,10 +93,27 @@ class LLMClient:
             yield event
 
 
-def _make_default_backend() -> AnthropicLike | None:
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        return None
-    from anthropic_backend import AnthropicBackend
+def _default_model() -> str:
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return os.environ.get("ANTHROPIC_MODEL", DEFAULT_ANTHROPIC_MODEL)
+    if os.environ.get("GEMINI_API_KEY"):
+        return os.environ.get("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+    return DEFAULT_ANTHROPIC_MODEL
 
-    return AnthropicBackend(api_key=api_key)
+
+def _make_default_backend() -> AnthropicLike | None:
+    # Anthropic takes priority when both are configured — Gemini is a
+    # free-tier fallback, not a replacement.
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    if anthropic_key:
+        from anthropic_backend import AnthropicBackend
+
+        return AnthropicBackend(api_key=anthropic_key)
+
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    if gemini_key:
+        from gemini_backend import GeminiBackend
+
+        return GeminiBackend(api_key=gemini_key)
+
+    return None

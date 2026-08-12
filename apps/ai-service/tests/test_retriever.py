@@ -60,6 +60,7 @@ async def _fresh_pool_per_test():
 
 async def test_raises_when_not_configured(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("VOYAGE_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     client = EmbeddingClient()
 
     with pytest.raises(RuntimeError, match="VOYAGE_API_KEY"):

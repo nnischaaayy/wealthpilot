@@ -38,7 +38,7 @@ get_dashboard_snapshot when the question is about the user's own numbers.
 
 DISCLAIMER = "This is informational analysis, not licensed financial advice."
 NOT_CONFIGURED = (
-    "The AI advisor isn't configured yet (no ANTHROPIC_API_KEY set). "
+    "The AI advisor isn't configured yet (no ANTHROPIC_API_KEY or GEMINI_API_KEY set). "
     "The rest of WealthPilot works fully without it."
 )
 
@@ -77,7 +77,12 @@ async def _execute_tool(
         return snapshot.__dict__
     if name == "rag_lookup":
         if not embedding_client.configured:
-            return {"error": "Knowledge base search isn't configured (VOYAGE_API_KEY unset)."}
+            return {
+                "error": (
+                    "Knowledge base search isn't configured "
+                    "(VOYAGE_API_KEY or GEMINI_API_KEY unset)."
+                )
+            }
         matches = await rag_lookup(embedding_client, tool_input["query"])
         return [{"title": m.title, "content": m.content} for m in matches]
     raise ValueError(f"Unknown tool: {name}")

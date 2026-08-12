@@ -76,6 +76,19 @@ fly deploy
 Then set repo variable `FLY_APP_NAME` and secret `FLY_API_TOKEN` for
 `deploy.yml`.
 
+Fly.io requires a card on file for new accounts as of 2024 — Render is a
+card-free alternative (free tier, sleeps after 15min idle): connect the repo
+directly in Render's dashboard, set **Root Directory** to `apps/ai-service`
+(it auto-detects the Dockerfile), and add the same env vars in Render's
+dashboard instead of via `fly secrets set`. No GitHub Actions wiring needed —
+Render deploys automatically on push, same as Vercel.
+
+**Free-tier alternative to `ANTHROPIC_API_KEY`/`VOYAGE_API_KEY`:** set
+`GEMINI_API_KEY` instead (from [aistudio.google.com](https://aistudio.google.com),
+no card required). `llm_client.py` and `embedding_client.py` both prefer
+Anthropic/Voyage when present and fall back to Gemini otherwise — see
+`gemini_backend.py` / `gemini_embedding_backend.py`.
+
 ### 5. GitHub repo settings
 - **Environments**: create `staging` and `production`. Add required
   reviewers to `production` — that's the actual manual-approval gate

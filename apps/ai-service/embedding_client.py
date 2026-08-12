@@ -51,18 +51,30 @@ class EmbeddingClient:
 
     async def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
         if self._backend is None:
-            raise RuntimeError("EmbeddingClient is not configured (VOYAGE_API_KEY unset)")
+            raise RuntimeError(_NOT_CONFIGURED)
         return await self._backend.embed(texts, input_type="document")
 
     async def embed_query(self, text: str) -> list[float]:
         if self._backend is None:
-            raise RuntimeError("EmbeddingClient is not configured (VOYAGE_API_KEY unset)")
+            raise RuntimeError(_NOT_CONFIGURED)
         [embedding] = await self._backend.embed([text], input_type="query")
         return embedding
 
 
+_NOT_CONFIGURED = "EmbeddingClient is not configured (VOYAGE_API_KEY or GEMINI_API_KEY unset)"
+
+
 def _make_default_backend() -> EmbeddingBackend | None:
-    api_key = os.environ.get("VOYAGE_API_KEY")
-    if not api_key:
-        return None
-    return VoyageBackend(api_key=api_key)
+    # Voyage takes priority when both are configured — Gemini is a
+    # free-tier fallback, not a replacement.
+    voyage_key = os.environ.get("VOYAGE_API_KEY")
+    if voyage_key:
+        return VoyageBackend(api_key=voyage_key)
+
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    if gemini_key:
+        from gemini_embedding_backend import GeminiEmbeddingBackend
+
+        return GeminiEmbeddingBackend(api_key=gemini_key)
+
+    return None

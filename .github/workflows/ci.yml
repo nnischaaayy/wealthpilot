@@ -37,7 +37,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -86,7 +86,7 @@ jobs:
     env:
       AUTH_SECRET: e2e-ci-secret-do-not-use-in-production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -138,7 +138,7 @@ jobs:
       # owns — migrations are applied below before pytest runs.
       DATABASE_URL_AI: postgresql://wealthpilot:wealthpilot@localhost:5432/wealthpilot
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22

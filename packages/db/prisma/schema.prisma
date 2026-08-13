@@ -93,7 +93,7 @@ model Account {
   name        String
   institution String?
   type        AccountType
-  currency    String      @default("USD")
+  currency    String      @default("INR")
   createdAt   DateTime    @default(now())
 
   workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

@@ -51,7 +51,7 @@ export function AccountSelect({
 
   function handleCreate() {
     startTransition(async () => {
-      const result = await createAccountAction({ name, type, currency: "USD" });
+      const result = await createAccountAction({ name, type, currency: "INR" });
       if (result.error) {
         setError(result.error);
         return;

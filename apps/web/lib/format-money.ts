@@ -3,7 +3,7 @@ const formatterCache = new Map<string, Intl.NumberFormat>();
 function getFormatter(currency: string): Intl.NumberFormat {
   let formatter = formatterCache.get(currency);
   if (!formatter) {
-    formatter = new Intl.NumberFormat(undefined, { style: "currency", currency });
+    formatter = new Intl.NumberFormat("en-IN", { style: "currency", currency });
     formatterCache.set(currency, formatter);
   }
   return formatter;

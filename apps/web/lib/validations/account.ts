@@ -11,7 +11,7 @@ export const createAccountSchema = z.object({
     .trim()
     .length(3, "Use a 3-letter currency code")
     .toUpperCase()
-    .default("USD"),
+    .default("INR"),
 });
 
 export type CreateAccountInput = z.infer<typeof createAccountSchema>;
